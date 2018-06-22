@@ -277,12 +277,13 @@ local function checkSubjectAndTargetRecursively(subject, target, path)
   end
 end
 
-local function checkNewParams(duration, subject, target, easing)
+local function checkNewParams(duration, subject, target, easing, delay)
   assert(type(duration) == 'number' and duration > 0, "duration must be a positive number. Was " .. tostring(duration))
   local tsubject = type(subject)
   assert(tsubject == 'table' or tsubject == 'userdata', "subject must be a table or userdata. Was " .. tostring(subject))
   assert(type(target)== 'table', "target must be a table. Was " .. tostring(target))
   assert(type(easing)=='function', "easing must be a function. Was " .. tostring(easing))
+  assert(type(delay) == "number" and delay >= 0, "delay must be a non-negative number. Was " .. tostring(delay))
   checkSubjectAndTargetRecursively(subject, target)
 end
 
@@ -346,21 +347,32 @@ end
 
 function Tween:update(dt)
   assert(type(dt) == 'number', "dt must be a number")
+  if self.delay > 0 then
+      if self.delay >= dt then
+          self.delay = self.delay - dt
+          return false
+      else
+          self.delay = 0
+          dt = dt - self.delay
+      end
+  end
   return self:set(self.clock + dt)
 end
 
 
 -- Public interface
 
-function tween.new(duration, subject, target, easing)
+function tween.new(duration, subject, target, easing, delay)
   easing = getEasingFunction(easing)
-  checkNewParams(duration, subject, target, easing)
+  delay = delay or 0
+  checkNewParams(duration, subject, target, easing, delay)
   return setmetatable({
     duration  = duration,
     subject   = subject,
     target    = target,
     easing    = easing,
-    clock     = 0
+    clock     = 0,
+    delay     = delay
   }, Tween_mt)
 end
 
